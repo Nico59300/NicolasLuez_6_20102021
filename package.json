@@ -1,0 +1,26 @@
+{
+  "name": "nicolasluez_6_20102021",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nico59300/NicolasLuez_6_20102021.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nico59300/NicolasLuez_6_20102021/issues"
+  },
+  "homepage": "https://github.com/Nico59300/NicolasLuez_6_20102021#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^6.0.12",
+    "nodemon": "^2.0.15"
+  }
+}
