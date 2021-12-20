@@ -5,23 +5,26 @@ exports.getOneSAuce = (req, res, next) => {
 
     Sauce.findOne({ _id: req.params.id })
         .then((sauce) => {
+
             if (!sauce) {
                 console.log("sauce non trouvée")
-                res.status(400).json({ error : "sauce non trouvée" })
-            }else {
-                res.status(201).send(sauce)
+                res.status(404).json({ error: "sauce non trouvée" })
             }
+
+            res.status(200).send(sauce)
+
         })
 }
 
 exports.getAllSauces = (req, res, next) => {
     Sauce.find()
         .then(sauces => {
-            res.status(201).send(sauces)
-        }).catch(err => res.status(500).json({error : err}))
+            res.status(200).send(sauces)
+        }).catch(err => res.status(400).json({ error: err }))
 }
 
 exports.postSauce = (req, res, next) => {
+
     let name = req.file.originalname.split(' ').join('_').split('.')[0]
     const MIME_TYPES = {
         'image/jpg': 'jpg',
@@ -33,7 +36,9 @@ exports.postSauce = (req, res, next) => {
         ...JSON.parse(req.body.sauce),
         imageUrl: `${req.protocol}://${req.get('host')}/images/${name}.${extension}`,
         likes: 0,
-        dislikes: 0
+        dislikes: 0,
+        usersLiked: [],
+        usersDisliked: []
     });
     console.log(sauceToSave)
 
@@ -43,79 +48,78 @@ exports.postSauce = (req, res, next) => {
 }
 
 exports.updateSauce = (req, res, next) => {
+
     Sauce.findOne({ _id: req.params.id })
         .then((sauce => {
+
             if (!sauce) {
                 res.status(404).json({ error: 'sauce non trouvée' })
-            } else {
-                if (sauce.userId !== req.auth.userId) {
-                    console.log("userId not match")
-                    res.status(403).json({ error: "requête non autorisée" })
-                } else {
-                    if (req.file) {
-                        // on normalise l'url du fichier
-                        let name = req.file.originalname.split(' ').join('_').split('.')[0];
-                        const MIME_TYPES = {
-                            'image/jpg': 'jpg',
-                            'image/jpeg': 'jpg',
-                            'image/png': 'png'
-                        };
-                        let extension = MIME_TYPES[req.file.mimetype];
-                        // on enregistre l'urn normalisé
-                        newImgUrl = `${req.protocol}://${req.get('host')}/images/${name}.${extension}`;
-                        Sauce.findOne({ _id: req.params.id })
-                            .then((sauce) => {
-                                url2delete = sauce.imageUrl.split('000/')[1];
-                                console.log("url2delete : " + url2delete)
-                                fs.unlink(url2delete, (err) => {
-                                    if (err) throw err;
-                                    console.log('ancienne image supprimée');
-                                });
-                            })
-                    }
-                    Sauce.updateOne({ _id: req.params.id },
-                        {
-                            ...req.body,
-                            imageUrl: req.file ? newImgUrl : Sauce.imageUrl
-                        })
-                        .then(() => {
-                            res.status(201).json({ message: 'Sauce modifiée !' })
-                        })
-                        .catch(error => res.status(400).json({ error }));
-                }
             }
+            // controle userid loggué est bien le créateur de la sauce
+            if (sauce.userId !== req.auth.userId) {
+                console.log("userId not match")
+                res.status(403).json({ error: "requête non autorisée" })
+            }
+
+            if (req.file) {
+                // on normalise l'url du fichier
+                let name = req.file.originalname.split(' ').join('_').split('.')[0];
+                const MIME_TYPES = {
+                    'image/jpg': 'jpg',
+                    'image/jpeg': 'jpg',
+                    'image/png': 'png'
+                };
+                let extension = MIME_TYPES[req.file.mimetype];
+
+                newImgUrl = `${req.protocol}://${req.get('host')}/images/${name}.${extension}`;
+                url2delete = sauce.imageUrl.split('000/')[1];
+                // on supprime l'ancienne image
+                fs.unlink(url2delete, (err) => {
+                    if (err) throw err;
+                    console.log('ancienne image supprimée');
+                });
+            }
+
+            Sauce.updateOne({ _id: req.params.id },
+                {
+                    ...req.body,
+                    imageUrl: req.file ? newImgUrl : Sauce.imageUrl
+                })
+                .then(() => {
+                    res.status(200).json({ message: 'Sauce modifiée !' })
+                })
+                .catch(error => res.status(400).json({ error }));
         }))
 }
 
 exports.deleteSauce = (req, res, next) => {
+
     Sauce.findOne({ _id: req.params.id })
         .then((sauce) => {
-            //console.log("sauce userID : " + sauce.userId)
-            //console.log("req auth : " + req.auth.userId)
-            // check user
+           
             if (!sauce) {
                 res.status(404).json({ error: 'sauce non trouvée' })
-            } else {
-                if (sauce.userId !== req.auth.userId) {
-                    console.log("userId not match")
-                    res.status(403).json({ error: "requête non autorisée" })
-                } else {
-                    console.log("match")
-                    url2delete = sauce.imageUrl.split('000/')[1];
-                    console.log("url2delete : " + url2delete)
-                    fs.unlink(url2delete, (err) => {
-                        if (err) throw err;
-                        console.log('image sauce supprimée');
-                    });
-
-                    Sauce.deleteOne({ _id: req.params.id })
-                        .then(() => {
-                            console.log(`url to delete : ${Sauce.imageUrl}`)
-                            res.status(200).json({ message: 'sauce supprimé !' })
-                        })
-                        .catch(error => res.status(400).json({ error }));
-                }
             }
+
+            if (sauce.userId !== req.auth.userId) {
+                console.log("userId not match")
+                res.status(403).json({ error: "requête non autorisée" })
+            }
+
+            
+            url2delete = sauce.imageUrl.split('000/')[1];
+            // on supprime l'image associée
+            fs.unlink(url2delete, (err) => {
+                if (err) throw err;
+                console.log('image sauce supprimée');
+            });
+
+            Sauce.deleteOne({ _id: req.params.id })
+                .then(() => {
+                    console.log(`url to delete : ${Sauce.imageUrl}`)
+                    res.status(200).json({ message: 'sauce supprimé !' })
+                })
+                .catch(error => res.status(400).json({ error }));
         })
 }
 
@@ -139,10 +143,16 @@ exports.likeSauce = (req, res, next) => {
         console.log(nbdislikes)
         switch (like) {
             case 1:
+                if(likes.includes(userId)) {
+                    break;
+                }
                 likes.push(userId)
                 nblikes += 1
                 break;
             case -1:
+                if(likes.includes(userId)) {
+                    break;
+                }
                 dislikes.push(userId)
                 nbdislikes += 1
                 break;
